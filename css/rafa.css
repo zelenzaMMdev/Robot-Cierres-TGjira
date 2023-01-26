@@ -1,0 +1,72 @@
+/* MIERDAS RAFA */
+
+th, td{
+    border: 1px solid;
+    padding: 5px;  
+    }
+    #CoberturaInfo{
+      display: table-cell;
+    }
+    .confluenceTd{
+      text-align: center;
+    }
+    .col-sm-1{
+      margin-left: 10px;
+    }  
+    .col-sm-4{
+    text-align: end !important;
+    display: -webkit-box;
+    display: inherit;
+    }  
+    .col-sm-6{
+      display: flex !important;
+    }   
+    .form-group, .row{
+      display: contents;
+      padding: 5px;
+    }   
+    .flexrow{
+      display: contents;
+    }    
+    .box-body{
+      border: 1px solid !important;
+    }
+     #rafa-franqueos{
+        margin-left: -5px;
+        margin-right: 3px;
+        font-size: 13px;
+        margin-bottom: 1px;
+     } 
+     .issue-table, .parentIssue {
+      color: firebrick !important;
+     }
+     .issue-link{
+       color: #007bff;
+       margin-right: 3px;
+     }
+    .toolbar-group, .toolbar-item:last-of-type a, .toolbar-item:last-of-type, .toolbar-trigger{
+      border: none;
+     }
+     .command-bar{
+       background: transparent;
+     }
+    #nofunciona{
+      background: red;
+      color: white;
+    }
+    #funciona{
+      background: green;
+      color: white;
+    }
+    .modal-content{
+        display: inline-block;
+    }
+    .form-horizontal{
+        display: grid;
+    }
+    /*clase del boton para los masivos*/
+    .filter-operations{
+        display: flex !important;
+    }
+
+     
