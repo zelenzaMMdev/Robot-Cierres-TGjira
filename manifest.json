@@ -1,51 +1,57 @@
 {
-	"icons": {
-		"16": "JARVIS.png"
-	},
-	"browser_action": {
-		"default_title": "feel the power",
-		"default_icon": "JARVIS.png"
-	},
-	"content_scripts": [
-		{
-			"css": [
-				"css/bootstrap.css",
-				"css/rafa.css"
-			],
-			"js": [
-				"axios-master/dist/axios.js",
-				"js/jquery-3.5.1.js",
-				"js/sweetalert.min.js",
-				"js/funciones.js",
-				"js/cierres.js"
-			],
-			"matches": [
-				"https://jira.masmovil.com/index.html?selectPageId=13003",
-				"https://jira.masmovil.com/",
-				"https://jira.masmovil.com/browse/MAS-*",
-				"https://jira.masmovil.com/secure/Dashboard.jspa?*",
-				"https://jira.masmovil.com/secure/Dashboard.jspa?selectPageId=13700",
-				"https://jira.masmovil.com/issues/?filter=*",
-				"https://jira.masmovil.com/issues/?*"
-			],
-			"run_at": "document_end"
-		}
-	],
-	"description": "by Desarollo Averías @Zelenza 2020",
-	"key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyJl1Z3q3dM+gq/ZCcCcnNyIdU7DUYpPzmbmuK6WBlvYMFxQtkh4C/bAjoRKxmnmiScM4lGL3auvu8MPZJ3iDHL91mzdhQspyDEOVjNRUsYRRq/tNgBVVqCfdPVJ8ju2yNb32FvWwYDPe9+0Td2dBt168+ZsOOk3n8Jr42bPQ27NbL+7xU+Gqb8TyikAGnn7VElhXRNUfh3SBhwEaCF81fMCPwQdy1tWCSoo0I2+qtNdjz4S3znVpJcZh2njQAlpleuZtxdSheMTJAw8QU7edL/RRaXsGyNiht0bkZEeo7LdGBzrOLQTlZR0Q0xxJD00mMrqtI8V9wzbL7Gvhj6ofgQIDAQAB",
-	"manifest_version": 2,
-	"name": "Robot de Cierres",
-	"options_ui": {
-		"open_in_tab": false,
-		"page": "options.html"
-	},
-	"permissions": [
-		"storage"
-	],
-	"update_url": "https://clients2.google.com/service/update2/crx",
-	"version": "1.1.6",
-	"version_name": "1.1.6 (17/10/2022)",
-	"web_accessible_resources": [
-		"imagenes/*.*"
-	]
+   "content_scripts": [
+      {
+         "css": [
+            "src/css/bootstrap.css",
+            "src/css/rafa.css"
+         ],
+         "js": [
+          
+         ],
+         "matches": [
+            "https://jira-pre.service-dev.k8s.masmovil.com/"
+         ],
+         "run_at": "document_end"
+      }
+   ],
+   "manifest_version": 3,
+   "name": "Robot Cierres",  
+   "description": "by Desarrollo Zelenza @2023",
+   "version": "1.0.0",
+   "version_name": "1.0.0(06/02/2023)",
+   "options_ui": {},
+   "permissions": [
+      "activeTab",
+      "scripting"
+    ],
+   "host_permissions": [
+      "https://jira-pre.service-dev.k8s.masmovil.com/browse/*"
+    ],
+    "background": {
+      "service_worker": "src/js/background.js"
+   },
+   "background.service_worker": {
+      "persistent": false
+    },
+    "action": {
+      "default_title": "Ext TGJira PRE",
+      "default_icon": {
+        "19": "JARVIS.png",
+        "38": "JARVIS.png"
+      }
+    },
+    "icons": {
+      "16": "dedosgordos.gif"
+   },
+   "web_accessible_resources": [
+      {
+        "resources": [
+          "imagenes/*"
+        ],
+        "matches": [
+          "https://jira-pre.service-dev.k8s.masmovil.com/*"
+        ]
+      }
+    ],
+   "update_url": "https://clients2.google.com/service/update2/crx"
 }
