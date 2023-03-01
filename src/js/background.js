@@ -14,7 +14,7 @@
 			//   chrome.scripting.executeScript({ target: { tabId: tabId }, files: ['./src/js/issue/principal.js'] });
 
 			/*===== Array con las rutas a cargar =====*/
-			if (tab.url.includes('https://jira-pre.service-dev.k8s.masmovil.com/issues/?filter=13700')) {
+			if (tab.url.includes('https://tgjira.masmovil.com/issues/?filter=25928')) {
 				const scripts = [
 					"./src/js/jquery-3.5.1.js",
 					"./src/js/sweetalert.min.js",
@@ -22,7 +22,6 @@
 					"./src/js/funciones.js",
 					"./src/js/cierres.js"
 				];
-				console.log("in");
 				scripts.forEach(function (script) {
 					chrome.scripting.executeScript({ target: { tabId: tabId }, files: [script] })
 				});

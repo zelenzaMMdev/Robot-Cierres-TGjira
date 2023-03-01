@@ -287,6 +287,32 @@ function alerta(title, timer) {
     }
   })
 }
+//funcion similar a la anterior, pero deja un log en la consola
+async function alertador (title, timer = 120000, consola = true) {
+  
+  const Toast = Swal.mixin({
+    toast: true,
+    position: 'center',
+    imageUrl: 'https://jarvis.masmovil.com/img-jarvis/dedosgordos.gif',
+    imageWidth: 200,
+    imageHeight: 200,
+    showConfirmButton: false,
+    timer: timer,
+    timerProgressBar: true,
+    onOpen: (toast) => {
+      // toast.addEventListener('mouseenter', Swal.stopTimer)
+      // toast.addEventListener('mouseleave', Swal.resumeTimer)
+    }
+  })
+  Toast.fire({
+    // icon: 'success',
+    title: title
+  }).then((result) => {
+    if (result.value) {
+    }
+  })
+  if(consola == true){ console.log(title);}
+}
 
 function addZero(i) {
   if (i < 10) {
@@ -339,7 +365,7 @@ const data_averia = (swiss) => {
   $.ajax({
     async: false,
     type: "GET",
-    url: `${swiss.url_api_tgjira_pre}${swiss.key_number}`,
+    url: `${swiss.url_api_tgjira_pro}${swiss.key_number}`,
     error: function (error) {
       console.log(error);
 
@@ -358,9 +384,7 @@ const comentarTicket = async (key_number, tokenBearer, comentario) => {
   const sendData = await fetch(swiss.url_api_tgjira_pre + key_number + "/comment", {
     "headers": {
       "Authorization": "Bearer " + tokenBearer,
-      "accept-language": "en,es-ES;q=0.9,es;q=0.8",
       "content-type": "application/json",
-      "Cookie": "visid_incap_2600688=ECDxpcp7Qu2x4K/rhI9o76TPT2MAAAAAQUIPAAAAAAD98aMP7n3WcrxOHR0nz/Ak",
     },
     "body": JSON.stringify(comentario),
     "method": "POST",
@@ -393,9 +417,7 @@ const asignarAveria = async (key_number, tokenBearer, userToAssingee) => {
   return await fetch(`https://jira-pre.service-dev.k8s.masmovil.com/rest/api/2/issue/${key_number}/assignee`, {
     "headers": {
       "Authorization": "Bearer " + tokenBearer,
-      "accept-language": "en,es-ES;q=0.9,es;q=0.8",
       "content-type": "application/json",
-      "Cookie": "visid_incap_2600688=ECDxpcp7Qu2x4K/rhI9o76TPT2MAAAAAQUIPAAAAAAD98aMP7n3WcrxOHR0nz/Ak",
     },
     "body": JSON.stringify({ "name": userToAssingee }),
     "method": "PUT",
@@ -501,21 +523,15 @@ const consultaRadius = async (provisioning_code, iua) => {
   req.params = params;
   const datos = JSON.stringify(req);
 
-  return await axios({
+ return await axios({
     method: "post",
     url: swiss.url_server_jarvis_masmovil,
     data: datos,
     processData: false,
     dataType: "json",
-  }).then(function (response) {
-    console.log(response.data);
-    console.log(response.status);
-    console.log(response.statusText);
-    console.log(response.headers);
-    console.log(response.config);
   });
-}
 
+}
 const consultaFijoRadius = async (telfijo) => {
 
   let req = {};
@@ -533,6 +549,110 @@ const consultaFijoRadius = async (telfijo) => {
     dataType: "json",
   });
 
+
+
+}
+
+function commentradius(claves, ultimoRegistro){
+      //dentro de las claves vienen las claves que se quedaran en testresumen
+      let testRadiusRes = {}
+      let acctstatus = ultimoRegistro["AcctStatusType"]
+
+      //asigno sobre las claves que quiero mantener los valores del test de radius 
+      for (const item of claves){
+        testRadiusRes[item] = ultimoRegistro[item]
+      }
+  		// crear comentario para pegar
+      let keys = Object.keys(testRadiusRes)
+      let vals = Object.values(testRadiusRes)
+      
+      let radiusPanel = `{panel:title=*RADIUS*}`
+  
+      let cabecerasTestRadius = "||" + keys.join("||") + "||Status||"
+  
+      let radiusvalues = "|"
+      for (let item of vals) item === null ? radiusvalues += "nulo|" : radiusvalues += item + "|"
+
+      radiusvalues +=  (acctstatus == "Stop") ? "{color:red" : "{color:green" +`}${acctstatus}{color}|`
+
+      let comentarioradius = `{panel:title=*RADIUS*}\n${cabecerasTestRadius}\n${radiusvalues}\n{panel}`
+
+      return {'testRadiusRes': testRadiusRes, 'comentarioradius':comentarioradius,'acctstatus':acctstatus}
+}
+function commentftth(claves, testFtth){
+  //dentro de las claves vienen las claves que se quedaran en testresumen
+  let testFtthRes = {}
+  
+  for (const item of claves){
+    i = testFtth.resultado.datos.outputParam.find(e => e.key === item);
+    testFtthRes[i.key] = parseInt(i.value)
+  }
+  
+  let keys = Object.keys(testFtthRes)
+  let vals = Object.values(testFtthRes)
+
+  let cabecerasTestFTTH = "||" + keys.join("||") + "||"
+      
+  let tablaFTTH = "|"
+  for (let item of vals) item === null ? tablaFTTH += "nulo|" : tablaFTTH += item + "|"
+
+  let comentarioFTTH = `{panel:title=*TEST FTTH / Fecha del Test: ${testFtth.fecha}*}${cabecerasTestFTTH}\n${tablaFTTH}\n{panel}`
+  return {'testFtthRes': testFtthRes, 'comentarioFTTH':comentarioFTTH,'ont_potencia_rx':testFtthRes["ont_potencia_rx"],'olt_potencia_rx':testFtthRes["olt_potencia_rx"]}
+}
+function commentTelf(claves,TestFijo){
+  let testTelfRes = {}
+
+  for (const item of claves){
+    testTelfRes[item] = TestFijo.data.estado[item]
+  }
+
+  let keys = Object.keys(testTelfRes)
+  let vals = Object.values(testTelfRes)
+
+  const testPanelFijo = "{panel:title=*ESTADO FIJO*}"
+
+  let cabecerasTestTelf = "||" + keys.join("||") + "||"
+      
+  let tablaTestTelf= "|"
+  for (let item of vals) item === null ? tablaTestTelf += "nulo|" : tablaTestTelf += item + "|"
+  tablaTestTelf +=  `|`
+
+  let comentarioTelf = `{panel:title=*ESTADO FIJO*}${cabecerasTestTelf}\n${tablaTestTelf}\n{panel}`
+  return {'testTelfRes': testTelfRes, 'comentarioTelf':comentarioTelf,'CpeRegistered':testTelfRes["CpeRegistered"]}
+}
+
+const comentarAveria = async (averia, tokenBearer, comentarioTelf, comentarioFTTH, comentarioradius, comentario) => {
+  //si viene sin comentario se añade el tipico de cierres
+  comentario = (typeof comentario !== 'string') ? '*ROBOT CIERRES : LINEA RECUPERA SERVICIO, SE RESUELVE TICKET*' : comentario
+  //son paneles si se añade el comentario undefined no se pega el test
+  let comment = "";
+  comment += typeof comentarioTelf !== undefined ? comentarioTelf + "\n" : "" 
+  comment += typeof comentarioFTTH !== undefined ? comentarioFTTH + "\n" : ""
+  comment += typeof comentarioradius !== undefined ? comentarioradius + "\n" : "" 
+  comment += `{panel:title=*COMENTARIO*}\n${comentario}{panel}`
+
+  const datos = { body: comment};
+
+  var config = {
+    method: 'post',
+    maxBodyLength: Infinity,
+    url: `${swiss.url_api_tgjira_pro}${averia}/comment`,
+    headers: { 
+      'Authorization': "Bearer " + tokenBearer, 
+      'Content-Type': 'application/json', 
+    },
+    data : JSON.stringify(datos)
+  };
+
+  await axios(config)
+  .then(function (response) {
+    return response;
+    console.log(JSON.stringify(response.data));
+  })
+  .catch(function (error) {
+    return error;
+    console.log(error);
+  });
 }
 
 const addComentIssue = (averia, respuesta, logTest, fecha_test, telFijo, datosFijo, comentario) => {
@@ -698,9 +818,7 @@ const derivar_ftth = async () => {
   return await fetch(`https://jira-pre.service-dev.k8s.masmovil.com/rest/api/latest/issue/${key_number}/transitions`, {
     "headers": {
       "Authorization": "Bearer " + tokenBearer,
-      "accept-language": "en,es-ES;q=0.9,es;q=0.8",
       "content-type": "application/json",
-      "Cookie": "visid_incap_2600688=ECDxpcp7Qu2x4K/rhI9o76TPT2MAAAAAQUIPAAAAAAD98aMP7n3WcrxOHR0nz/Ak",
     },
     "body": JSON.stringify({
       "transition": {

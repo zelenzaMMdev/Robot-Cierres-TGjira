@@ -15,6 +15,7 @@ document.querySelector('.aui-header-primary ul').insertAdjacentElement('beforeen
 let token = $("#atlassian-token").attr('content');
 sessionStorage.setItem("token_TGJira", token);
 let tokenBearer = "MjcwOTYyNzYxOTA4OsEnz1BSOW8gm+IKUl8eep496RB9"
+tokenBearer = "NjgyODU3MzAzMjQyOvHTcfsSRzQ2ZHfTV0TFnGgRVauZ"
 
 const revisar_key_numbers = async () => {
 
@@ -31,7 +32,8 @@ const revisar_key_numbers = async () => {
 	// 	}
 	// }
 
-	const tabla = $('tbody tr'); //array
+	//const tabla = $('tbody tr'); //array
+	const tabla  = $("#issuetable tr.issuerow");
 	let timer = 120000;
 	let title;
 	const usuario = $('meta[name=ajs-remote-user]').attr('content');
@@ -46,7 +48,7 @@ const revisar_key_numbers = async () => {
 		const provisioning_code = "n1410002#1_1007_98"
 		const identificador_ot = $('.customfield_10301')[i].innerText;
 		const assigned = $('.assignee')[i].innerText;
-		const tecnologia = $('.customfield_12331')[i].innerText;
+		const tecnologia = $('.customfield_12326')[i].innerText; //customfield_12326 PRO customfield_12331 PRE
 		const key_number = tabla[i].attributes[2].value;
 		const rel = tabla[i].attributes[1].value;
 		const propietario_red = $('.customfield_10510')[i].innerText;
@@ -58,7 +60,7 @@ const revisar_key_numbers = async () => {
 		swiss.key_number = key_number;
 		data_averia(swiss);
 
-		const tipologia = $(".customfield_10325")[i].innerText
+		const tipologia = $(".customfield_10325")[i].innerText 
 
 		const telFijo = $('.customfield_10349')[i].innerText;
 		const fecha_creacion = $(".created span time")[i].dateTime;
@@ -69,7 +71,7 @@ const revisar_key_numbers = async () => {
 		let etiquetaContrata_N1 = false;
 		let etiquetaTECNICONG = false;
 		let etiqueta = false;
-		let flagOKradius,flagOKftth,flagOKphone = false;
+		let flagOKradius = false,flagOKftth = false,flagOKphone = false;
 
 		let iua = $('.customfield_10332')[i].innerText;
 		iua = "J41904AFA317";
@@ -84,14 +86,13 @@ const revisar_key_numbers = async () => {
 		if($(".customfield_16525:eq("+i+") td").length > 0){
 			try {
 				//si ha pasado por fsm y registrado ticket cuenta como flagPasoFSM == true
-				for (let i = 0; i < $(".customfield_16525 table tbody tr").length; i++) {
-					if($(".customfield_16525 table tbody tr:eq("+i+") td:eq(1)")[0].innerText==="FSM" && $(".customfield_16525 table tbody tr:eq("+i+") td:eq(3)")[0].innerText ==="El ticket se ha registrado correctamente") flagPasoFSM = true
+				for (let e = 1; e < $(".customfield_16525:eq("+i+") table tbody tr").length; e++) {
+					if($(".customfield_16525:eq("+i+") table tbody tr:eq("+e+") td:eq(1)")[0].innerText==="FSM" && $(".customfield_16525:eq("+i+") table tbody tr:eq("+e+") td:eq(3)")[0].innerText ==="El ticket se ha registrado correctamente") flagPasoFSM = true
 				}
 			} catch (error) {
 				console.log(`error determinando paso por FSM`);
 			}
 		}
-		
 
 		//comprobamos si tiene alguna de las etiquetas no permitidas
 		let etiquetas = $(`.labels:eq(${i}) .lozenge`).map(function() {return $(this).text();}).get();
@@ -110,16 +111,14 @@ const revisar_key_numbers = async () => {
 				let descripcion_reiterado = $('.description:eq('+i+') .confluenceTable .confluenceTh:contains("Reiterado Avería")').next()[0].innerText
 				const res_regex = [...descripcion_reiterado.matchAll(regex_reiterado)];
 				if(res_regex[0][1]!=="#REITERADAX") alerta(`${key_number} : sin descripcion de reiterado`, timer);
-				num_reiteros = parseInt(res_regex[2])
+				num_reiteros = parseInt(res_regex[0][2])
 		} catch (error) {
 			alerta(`${key_number} : sin descripcion de reiterado`, timer);
 		}
 
 		//si la averia tiene reitero > 0, osea, esta reiterada, se omite
 		if (num_reiteros > 0) {
-			console.log(`Averia ${key_number} Reiterada ${num_reiteros} saltando a la siguiente`);
-			alerta(`Averia ${key_number} Reiterada ${num_reiteros} saltando a la siguiente`);
-			await sleep(0.5);
+			alertador(`Averia ${key_number} Reiterada ${num_reiteros} saltando a la siguiente`,timer,true); await sleep(0.5);
 			continue;
 		}
 
@@ -173,10 +172,7 @@ const revisar_key_numbers = async () => {
 		}*/
 
 		
-
-		alerta(`${key_number} Comprobando estado en radius...`, timer);
-		await sleep(0.5);
-		console.log(`${key_number} Comprobando estado en radius...`);
+		alertador(`${key_number} Comprobando estado en radius...`,timer,true); await sleep(0.5);
 
 		try {
 			var _consultaRadius = await consultaRadius(provisioning_code, iua);
@@ -189,18 +185,14 @@ const revisar_key_numbers = async () => {
 
 		if (!responseConsultaRadius || responseConsultaRadius === undefined) {
 
-			console.log(`${key_number}: Asignando Avería...`);
-			alerta(`${key_number} Asignando Avería...`, timer);
-			await sleep(0.5);
+			alertador(`${key_number}: Asignando Avería...`,timer,true); await sleep(0.5);
 
 			await asignarAveria(key_number, tokenBearer, "alfonso.asenjo@asesormasmovil.es");
 
 			await comentarTicket(key_number, tokenBearer, { body: `*ROBOT CIERRES : Sin registros en Radius de este cliente*` })
 
-			title = `${key_number}ASIGNADA PARA SU REVISION`
-			alerta(title, timer);
-			await sleep(1);
-			console.log(`${key_number} ASIGNADA PARA SU REVISION`);
+			alertador(`${key_number} ASIGNADA PARA SU REVISION`,timer,true); await sleep(1);
+
 			continue;
 		}
 
@@ -212,62 +204,35 @@ const revisar_key_numbers = async () => {
 		} catch (error) {
 			var fecha_inicio = responseConsultaRadius[0].fecha_fin;
 		}
-
+		//creo comentario de radius
 		//dejo unicamente las partes del test que me interesan
 		let claves = ["fecha","fecha_fin","UserName","duration","FramedAddress","NatIpAddress","Host"]
-		let testRadiusRes = {}
-		let acctstatus = {"AcctStatusType" : ultimoRegistro["AcctStatusType"]}
-
-		//asigno sobre las claves que quiero mantener los valores del test de radius 
-		for (const item of claves){
-			testRadiusRes[item] = ultimoRegistro[item]
-		}
-
+		//contiene testRadiusRes con el resumen de las claves escogidas del test , comentarioradius con el comentario para jira, acctstatus con el ultimo estado para radius
+		let comentarioradius = commentradius(claves, ultimoRegistro);
+		
 		//si ultimo registro de radius esta en stop pasamos a la siguiente
-		if(acctstatus["AcctStatusType"] == "Stop"){
-			title = `${key_number} ESTADO RADIUS ${acctstatus["AcctStatusType"]}`
-			alerta(title, timer);
-			console.log(`${key_number} ESTADO RADIUS ${acctstatus["AcctStatusType"]}`);
+		if(comentarioradius["acctstatus"] == "Stop"){
+			alertador(`${key_number} ESTADO RADIUS ${comentarioradius["acctstatus"]}`,timer,true); await sleep(0.2);
 			continue;
 		}
 
 		//TODO modificado para pruebas
 		//si la fecha de creacion de la averia es posterior a la ultima sesion de radius y esta es start o alive quiere decir que puede ser un cruce o un no navega cable
-		if(Date.parse(fecha_creacion) < Date.parse(testRadiusRes["fecha"]) && (acctstatus["AcctStatusType"] === "Start" || acctstatus["AcctStatusType"] === "Alive")){
-			title = `${key_number} fecha radius anterior a creacion averia`
-			alerta(title, timer);
-			console.log(`${key_number} fecha radius anterior a creacion averia`);
+		/*if(Date.parse(fecha_creacion) > Date.parse(comentarioradius["testRadiusRes"]["fecha"]) && (comentarioradius["acctstatus"] === "Start" || comentarioradius["acctstatus"] === "Alive")){
+			alertador(`${key_number} fecha radius anterior a creacion averia`,timer,true); await sleep(0.5);
 			continue;
-		}
+		}*/
 
-		// crear comentario para pegar
-		let keys = Object.keys(testRadiusRes)
-		let vals = Object.values(testRadiusRes)
-		
-		let radiusPanel = `||{panel:title=*RADIUS*}${String.fromCharCode(13)}${String.fromCharCode(13)}${String.fromCharCode(13)}${String.fromCharCode(13)}\n`
+		alertador(`${key_number} estado en radius: ${comentarioradius["acctstatus"]}`,timer,true); await sleep(0.5);
 
-		let radiuskeys = "||" + keys.join("||") + "||Status||\n"
-
-		let radiusvalues = "|"
-		for (let item of vals) item === null ? radiusvalues += "nulo|" : radiusvalues += item + "|"
-		radiusvalues +=  '|{color:'+acctstatus["AcctStatusType"] == "Stop" ? "red" : "green" +`}${acctstatus["AcctStatusType"]}{color}||${String.fromCharCode(13)}`
-		let comentarioradius = comentarioRadius = radiusPanel + radiuskeys+ radiusvalues
-
-		alerta(`${key_number} estado en radius: ${acctstatus["AcctStatusType"]}`, timer);
-		await sleep(0.5);
-		console.log(`${key_number} estado en radius: ${acctstatus["AcctStatusType"]}`);
-
-		
-		if (acctstatus["AcctStatusType"] === "Start" || acctstatus["AcctStatusType"] === "Alive") {
+		if (comentarioradius["acctstatus"] === "Start" || comentarioradius["acctstatus"] === "Alive") {
 			// OK RADIUS
 			flagOKradius = true;
 			let testFtth = "sin test"
 			//si es neba o vula no se lanza test
 			if(tecnologia === "FTTH"){
-
-				console.log(`${key_number}  : Lanzando Test FTTH...`);
-				alerta(`${key_number}  : Lanzando Test FTTH...`, timer);
-				await sleep(0.5);
+				
+				alertador(`${key_number}  : Lanzando Test FTTH...`,timer,true); await sleep(0.5);
 
 				testFtth = await testFtthLaunch(iua, swiss);
 
@@ -280,70 +245,31 @@ const revisar_key_numbers = async () => {
 			if (testFtth !== "sin test") {
 
 				let claves = ["olt_potencia_rx","olt_potencia_tx","ont_potencia_rx","ont_potencia_tx"]
-				let testFtthRes = {}
-				
-				for (const item of claves){
-					i = testFtth.resultado.datos.outputParam.find(e => e.key === item);
-					testFtthRes[i.key] = parseInt(i.value)
-				}
-				
-				let keys = Object.keys(testFtthRes)
-				let vals = Object.values(testFtthRes)
-
-				const testPanelFTTH = `{panel:title=*TEST FTTH / Fecha del Test: ${testFtth.fecha}*}${String.fromCharCode(13)}`;
-
-				let panelTestFTTH = "||" + keys.join("||") + "||\n"
-						
-				let tablaFTTH = "|"
-				for (let item of vals) item === null ? tablaFTTH += "nulo|" : tablaFTTH += item + "|"
-
-				let comentarioFTTH = testPanelFTTH + panelTestFTTH + tablaFTTH
+				//devuelve testFtthRes, comentarioFTTH,ont_potencia_rx,olt_potencia_rx
+				let comentarioftth = commentftth(claves, testFtth)
 
 				console.log(`${key_number} Comprobando resultados del TEST FTTH`);
 
 				//si el valor de potencia es menor a lo que nos indique operativa estara correcto
-				if (testFtthRes["olt_potencia_rx"] < 29 && testFtthRes["ont_potencia_rx"] < 29) {
+				if (comentarioftth["olt_potencia_rx"] < 29 && comentarioftth["ont_potencia_rx"] < 29) {
 
 					flagOKftth = true
-					
-					//logTest = new Array({ ont_estado_operacional: ont_estado_operacional, olt_potencia_rx: olt_potencia_rx, olt_potencia_tx: olt_potencia_tx, ont_potencia_rx: ont_potencia_rx, ont_estado_administrativo: ont_estado_administrativo });
 
 					if (Marca !== "PEPEPHONE") {
 
-						console.log(`${key_number} : Test Correcto, Comprobando estado del Fijo...`);
-						title = `${key_number} : Test Correcto, Comprobando estado del Fijo...`;
-						alerta(title, timer);
-						await sleep(0.5);
+						alertador(`${key_number} : Test Correcto, Comprobando estado del Fijo...`,timer,true); await sleep(0.5);
 
 						const TestFijo = await consultaFijoRadius(telFijo);
-
+						let comentarioTelf = undefined
 						try {
 
 							let claves = ["CpeRegistered","ENUM","ExistsIMS","Portability","Route","XenaStaus"]
-							let testTelfRes = {}
+							comentarioTelf = commentTelf(claves, TestFijo)
 
-							for (const item of claves){
-								testTelfRes[item] = TestFijo.data.estado[item]
-							}
-
-							let keys = Object.keys(testTelfRes)
-							let vals = Object.values(testTelfRes)
-
-							const testPanelFijo = "{panel:title=*ESTADO FIJO*}" + String.fromCharCode(13) + String.fromCharCode(13) + String.fromCharCode(13)
-
-							let panelTestTelf = "||" + keys.join("||") + "||\n"
-									
-							let tablaTestTelf= "|"
-							for (let item of vals) item === null ? tablaTestTelf += "nulo|" : tablaTestTelf += item + "|"
-							tablaTestTelf +=  `|`
-
-							let comentarioTelf = testPanelFijo + panelTestTelf + tablaTestTelf
 
 						} catch (error) {
 
-							console.log(`${key_number} CPE Registrado : error, Asignando a ${user}`);
-							alerta(`${key_number} CPE Registrado : error, Asignando a ${user}`, timer);
-							await sleep(0.5);
+							alertador(`${key_number} CPE Registrado : error, Asignando a ${user}`,timer,true); await sleep(0.5);
 
 							await asignarAveria(key_number, tokenBearer, "alfonso.asenjo@asesormasmovil.es");
 
@@ -355,11 +281,9 @@ const revisar_key_numbers = async () => {
 
 						}
 
-						if (testTelfRes["CpeRegistered"] !== "REGISTERED") {
+						if (comentarioTelf["CpeRegistered"] !== "REGISTERED") {
 
-							console.log(`Asignando : ${key_number} a ${user}`);
-							alerta(`Asignando : ${key_number}`);
-							await sleep(0.5);
+							alertador(`Asignando : ${key_number} a ${user}`,timer,true); await sleep(0.5);
 
 							await asignarAveria(key_number, tokenBearer, "alfonso.asenjo@asesormasmovil.es");
 
@@ -368,23 +292,19 @@ const revisar_key_numbers = async () => {
 							location.reload();
 
 						} else {
-
 							// TODO CORRECTO PARA EL CIERRE
-							console.log(`Comentando : ${key_number}...`);
-							alerta(`${key_number} : Comentando...`, timer);
-							await sleep(0.5);
+							alertador(`Comentando : ${key_number}...`,timer,true); await sleep(0.5);
 
 							if (Marca !== "PEPEPHONE") {
-								//añadimos comentario con datos del fijo
-								await addComentIssue(key_number, tablaradius, testFtth, fecha_test, telFijo, datosFijoRadius, `*ROBOT CIERRES : LINEA RECUPERA SERVICIO, SE RESUELVE TICKET*`);
+								//añadimos comentario con pruebas de cierre, son paneles si se añade el comentario undefined no se pega el test
+								await comentarAveria(key_number, tokenBearer, comentarioTelf["comentarioTelf"], comentarioftth["comentarioFTTH"],comentarioradius["comentarioradius"],undefined)
+
 							} else {
 								//añadimos comentario sin datos del fijo
-								await addComentIssue(key_number, tablaradius, testFtth, fecha_test, telFijo, false, `*ROBOT CIERRES : LINEA RECUPERA SERVICIO, SE RESUELVE TICKET*`);
+								await comentarAveria(key_number, tokenBearer, undefined, comentarioftth["comentarioFTTH"],comentarioradius["comentarioradius"],undefined)
 							}
 
-							console.log(`Cerrando : ${key_number}...`);
-							alerta(`${key_number} : Procediendo a Cierre...`, timer);
-							await sleep(0.5);
+							alertador(`Cerrando : ${key_number}...`,timer,true); await sleep(0.5);
 
 							//cerramos avería
 							await cierre_ftth(key_number, tokenBearer, flagPasoFSM, etiquetaAI);
@@ -396,15 +316,12 @@ const revisar_key_numbers = async () => {
 
 						//SI NO TIENE FIJO 
 						logTest = undefined;
-						console.log(`Comentando : ${key_number}...`);
-						alerta(`${key_number}  : Comentando...`, timer);
-						await sleep(0.5);
 
-						const resComent = await addComentIssue(key_number, tablaradius, logTest, fecha_test, false, false, `*ROBOT CIERRES : LINEA RECUPERA SERVICIO, SE RESUELVE TICKET*`);
+						alertador(`Comentando : ${key_number}...`,timer,true); await sleep(0.5);
 
-						console.log(`${key_number} Comentario añadido, procediendo al cierre`);
-						alerta(`${key_number} Comentario añadido, procediendo al cierre`, timer);
-						await sleep(0.5);
+						await comentarAveria(key_number, tokenBearer, undefined, comentarioftth["comentarioFTTH"],comentarioradius["comentarioradius"],undefined)
+
+						alertador(`${key_number} Comentario añadido, procediendo al cierre`,timer,true); await sleep(0.5);
 
 						await cierre_ftth(key_number, tokenBearer, flagPasoFSM, etiquetaAI);
 
@@ -415,10 +332,8 @@ const revisar_key_numbers = async () => {
 
 				} else {
 
-					console.log(`Asignando : ${key_number} a ${user}`);
-					alerta(`Asignando : ${key_number}`);
-					await sleep(0.5);
-					
+					alertador(`Asignando : ${key_number} a ${user}`,timer,true); await sleep(0.5);
+
 					await asignarAveria(key_number, tokenBearer, "alfonso.asenjo@asesormasmovil.es");
 
 					await comentarTicket(key_number, tokenBearer, { body: `*ROBOT CIERRES : POTENCIA INCORRECTA, Asignando para revision*` })
