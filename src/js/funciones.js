@@ -2,13 +2,11 @@
 var swiss = new Object();
 
 swiss.manifestData = chrome.runtime.getManifest();
-swiss.url_server_jarvis_masmovil = "https://jarvis.masmovil.com/includes/interfazajax.inc.php";
-swiss.url_server_jarvis_zelenza = "https://jarvis.zelenza.com/includes/interfazajax.inc.php";
-swiss.url_api_tgjira_pro = "https://tgjira.masmovil.com/rest/api/2/issue/";
-swiss.url_api_tgjira_pre = "https://jira-pre.service-dev.k8s.masmovil.com/rest/api/2/issue/";
-swiss.url_server_local_2 = "https://192.168.98.26/proyectos/includes/interfazajax.inc.php";
-swiss.url_server_pc_local = "https://127.0.0.1/zelenza-jarvis/includes/interfazajax.inc.php";
-//swiss.url_server_pc_local = "https://localhost/jarvisnew/includes/interfazajax.inc.php";
+swiss.url_jarvis_masmovil = "https://jarvis.masmovil.com/includes/interfazajax.inc.php";
+swiss.url_jarvis_zelenza = "https://jarvis.zelenza.com/includes/interfazajax.inc.php";
+swiss.url_tgjira_pro = "https://tgjira.masmovil.com";
+swiss.url_tgjira_pre = "https://jira-pre.service-dev.k8s.masmovil.com";
+swiss.tgjira_pro_filter = "https://tgjira.masmovil.com/issues/?filter=26206";  //FILTRO DEL ROBOT DE CIERRES
 
 swiss.issue_labels = [];
 
@@ -26,29 +24,27 @@ switch (window.location.pathname.split("/")[1]) {
     break;
 }
 
+/** funcion para añadir paradas de tiempo en la ejecucion **/
 const sleep = secs => new Promise(resolve => setTimeout(resolve, secs * 1000));
 
-const colorForIssue = (i, color) => {
-  $(".customfield_10902")[i].style.backgroundColor = color;//ROJO
-  $(".customfield_10902")[i].style.color = "white";
-  $(".customfield_15800")[i].style.backgroundColor = color; //ROJO
-  $(".customfield_15800")[i].style.color = "white";
+/** funcion para colorear las averías **/
+const colorForIssue = (tabla, i, color) => {
+  tabla[i].style.backgroundColor = color;//ROJO
+  tabla[i].style.color = "white";
+  tabla[i].style.backgroundColor = color; //ROJO
+  tabla[i].style.color = "white";
 }
 
-const is_negative_number = (number) => {
-  if ((number < 0)) {
-    return true;
-  } else {
-    return false;
-  }
-}
+/** funcion para comprobar si el numero es negativo **/
+const is_negative_number = (number) => { return (number < 0) ? true : false; }
 
-const isbetween = (timeini, timefin, time) => {
+/** funcion para comprobar las horas a la que se para y no escala mas **/
+const horarioRobot = (timeini, timefin, time) => {
   let tiempo = new Date(Date.now());
   const h = tiempo.getHours();
 
   switch (h) {
-    //horas a la que se para y no escala mas
+    case 0:
     case 1:
     case 2:
     case 3:
@@ -63,7 +59,7 @@ const isbetween = (timeini, timefin, time) => {
   return true;
 }
 
-const isbetween_2 = (timeini, timefin, time) => {
+const horarioLocucion = (timeini, timefin, time) => {
   let tiempo = new Date(Date.now());
   const h = tiempo.getHours();
 
@@ -86,49 +82,60 @@ const isbetween_2 = (timeini, timefin, time) => {
   return true;
 }
 
-const locucion = async (movil, seguridad, averia) => {
-  let hoy = new Date();
-  hoy.setMinutes(hoy.getMinutes() + 1);
-  let hoydia = hoy.getUTCDate();
-  let hoymes = hoy.getMonth();
-  hoymes += 1;
-  let hoyano = hoy.getFullYear();
-  let hoyhora = hoy.getHours();
-  let hoyminutos = hoy.getMinutes();
+const locucion = async (movil, seguridad, key_number) => {
+
+  let now = new Date();
+  now.setMinutes(now.getMinutes() + 1);
+  let _day = now.getUTCDate();
+  let _month = now.getMonth();
+  _month += 1;
+
+  let year = now.getFullYear();
+  let hour = now.getHours();
+  let minutes = now.getMinutes();
+  let seconds = now.getSeconds();
   let operadorC2C = "OTRO";
-  let horallamada = `${hoyano}-${hoymes}-${hoydia} ${hoyhora}:${hoyminutos}:00`;
+
+  _day = addZero(_day);
+  _month = addZero(_month);
+  hour = addZero(hour);
+  minutes = addZero(minutes);
+  seconds = addZero(seconds);
+
+  let fechaDeLaLlamada = `${_day}/${_month}/${year}`;
+  let horaDeLaLlamada = `${hour}:${minutes}:${seconds}`;
   //var horallamada_SQL = hoyano + "-" + str_pad(hoymes) + "-" + str_pad(hoydia) + " " + str_pad(hoyhora) + ":" + str_pad(hoyminutos) + ":" + str_pad(hoy.getSeconds());
 
-  const timeini = "08:00";
-  const timefin = "22:00";
+  const timeInicio = "08:00";
+  const timeFin = "22:00";
   let tiempo = new Date(Date.now());
   const h = tiempo.getHours();
   const m = tiempo.getMinutes();
   const time = `${h}:${m}`
   //comprobamos que estemos dentro del horario permitido para enviar las locuciones.
-  const horario = isbetween_2(timeini, timefin, time);
+  const horario = horarioLocucion(timeInicio, timeFin, time);
 
   if (!horario) {
-    const comentariolocucion = { body: `*ROBOT VALIDACIONES N1 A CONTRATA -- Locucion no enviada por estar fuera de horario(08:00 a 22:00)*` };
+    const comentariolocucion = { body: `{panel:title=*ROBOT DE CIERRES :*|titleBGColor=#51A9C0}\nLocucion no enviada por estar fuera de horario(08:00 a 22:00)*{panel}` };
 
     const myHeaders = new Headers();
     myHeaders.append("X-Requested-With", "XMLHttpRequest");
     myHeaders.append("Accept-Language", "es-ES,es;q=0.9");
-    myHeaders.append("Content-Type", "application/json")
+    myHeaders.append("Content-Type", "application/json");
     const requestOptions = {
       method: 'POST',
       headers: myHeaders,
       body: JSON.stringify(comentariolocucion),
     };
-    return await fetch(`https://jira.masmovil.com/rest/api/2/issue/${averia}/comment`, requestOptions);
+    return await fetch(`${swiss.url_tgjira_pro}/rest/api/2/issue/${key_number}/comment`, requestOptions);
 
   } else {
 
     switch (seguridad) {
-      case "YOIGO":
+      case "Yoigo":
         operadorC2C = "6";
         break;
-      case "MÁSMÓVIL":
+      case "MásMóvil":
         operadorC2C = "7";
         break;
 
@@ -139,7 +146,7 @@ const locucion = async (movil, seguridad, averia) => {
     const urlC2C = "http://172.30.32.53:8180/ClicktoCall/CreateClicktoCall?";
 
     const queryC2Carry = {
-      date: horallamada,
+      date: horaDeLaLlamada,
       idLista: operadorC2C,
       nombre: "Locucion",
       msisdn: movil,
@@ -152,7 +159,7 @@ const locucion = async (movil, seguridad, averia) => {
     await sleep(1)
     newWindow.close();
 
-    const comentariolocucion = { body: `*ROBOT VALIDACIONES N1 A CONTRATA -- Se informa a cliente mediante locucion automatica, se cierra incidencia con evidencia de funcionamiento. Informamos a cliente en ${movil} hora de llamada ${horallamada}*` };
+    const comentariolocucion = { body: `{panel:title=*ROBOT DE CIERRES :*|titleBGColor=#51A9C0}\n*Se informa a cliente mediante locucion automatica en el TC: ${movil} el dia ${fechaDeLaLlamada} a las ${horaDeLaLlamada} del cierre de la incidencia con evidencia de funcionamiento.*{panel}` };
 
     const myHeaders = new Headers();
     myHeaders.append("X-Requested-With", "XMLHttpRequest");
@@ -163,96 +170,8 @@ const locucion = async (movil, seguridad, averia) => {
       headers: myHeaders,
       body: JSON.stringify(comentariolocucion),
     };
-    return await fetch(`https://jira.masmovil.com/rest/api/2/issue/${averia}/comment`, requestOptions)
+    return await fetch(`${swiss.url_tgjira_pro}/rest/api/2/issue/${key_number}/comment`, requestOptions)
   }
-}
-
-const comprobarReitero = async (ot, fecha) => {
-
-  var req = {};
-  var params = [ot, fecha];
-  req.class = "consultas";
-  req.method = "comprobarReitero";
-  req.params = params;
-  const datos = JSON.stringify(req);
-
-  return await axios({
-    method: "post",
-    url: "https://jarvis.zelenza.com/includes/interfazajax.inc.php",
-    data: datos,
-    processData: false,
-    dataType: "json",
-  });
-
-  // const pepe = { "data": "NO" };
-  // return pepe;
-}
-
-const actualizarEtiqueta_2 = async (numaveria, etiqueta) => {
-
-  var url = `https://jira.masmovil.com/rest/api/2/issue/${numaveria}`;
-
-  $.ajax({
-    async: false,
-    type: "PUT",
-    url: url,
-    data: JSON.stringify({ "update": { "labels": [{ "add": etiqueta }] } }),
-    headers: {
-      "content-Type": "application/json",
-      "Accept-Language": "es-ES,es;q=0.9",
-      "X-Requested-With": "XMLHttpRequest"
-    }
-  }).done(async function (data, textStatus, xhr) {
-
-    console.log("Etiqueta Añadida");
-
-  }).fail(async function (data, textStatus, xhr) {
-
-    console.log(textStatus);
-    console.log(data.responseText);
-    //This shows status code eg. 403
-    console.log("error", data.status);
-    //This shows status message eg. Forbidden
-    console.log("STATUS: " + xhr);
-  })
-}
-
-const actualizarEtiqueta = async (averia) => {
-
-  var url = `https://jira.masmovil.com/rest/api/2/issue/${averia}`;
-  var fechaInicio = new Date();
-
-  $.ajax({
-    async: false,
-    type: "PUT",
-    url: url,
-    data: JSON.stringify({ "update": { "labels": [{ "add": "#PENDIENTE_CONTRATA_N1" }] } }),
-    headers: {
-      "content-Type": "application/json",
-      "Accept-Language": "es-ES,es;q=0.9",
-      "X-Requested-With": "XMLHttpRequest"
-    }
-  }).done(async function (data, textStatus, xhr) {
-
-    console.log("Etiqueta añadida");
-
-  }).fail(async function (data, textStatus, xhr) {
-
-    console.log(textStatus);
-    console.log(data.responseText);
-    //This shows status code eg. 403
-    console.log("error", data.status);
-    //This shows status message eg. Forbidden
-    console.log("STATUS: " + xhr);
-
-    Swal.fire({
-      icon: 'error',
-      title: 'Oops...',
-      text: 'Fallo al realizar la accion solicitada',
-      footer: 'By Departamento de Desarrollo @Zelenza 2020',
-    })
-
-  })
 }
 
 const insertarEnDiario = (averia, tipologia, fecha_creacion) => {
@@ -264,32 +183,9 @@ const insertarEnDiario = (averia, tipologia, fecha_creacion) => {
   xhr.send(data)
 }
 
-function alerta(title, timer) {
-  const Toast = Swal.mixin({
-    toast: true,
-    position: 'center',
-    imageUrl: 'https://jarvis.masmovil.com/img-jarvis/dedosgordos.gif',
-    imageWidth: 200,
-    imageHeight: 200,
-    showConfirmButton: false,
-    timer: timer,
-    timerProgressBar: true,
-    onOpen: (toast) => {
-      // toast.addEventListener('mouseenter', Swal.stopTimer)
-      // toast.addEventListener('mouseleave', Swal.resumeTimer)
-    }
-  })
-  Toast.fire({
-    // icon: 'success',
-    title: title
-  }).then((result) => {
-    if (result.value) {
-    }
-  })
-}
 //funcion similar a la anterior, pero deja un log en la consola
-async function alertador (title, timer = 120000, consola = true) {
-  
+const showAlert = (title, timer, consola) => {
+
   const Toast = Swal.mixin({
     toast: true,
     position: 'center',
@@ -299,10 +195,6 @@ async function alertador (title, timer = 120000, consola = true) {
     showConfirmButton: false,
     timer: timer,
     timerProgressBar: true,
-    onOpen: (toast) => {
-      // toast.addEventListener('mouseenter', Swal.stopTimer)
-      // toast.addEventListener('mouseleave', Swal.resumeTimer)
-    }
   })
   Toast.fire({
     // icon: 'success',
@@ -311,10 +203,11 @@ async function alertador (title, timer = 120000, consola = true) {
     if (result.value) {
     }
   })
-  if(consola == true){ console.log(title);}
+  if (consola) { console.log(title); }
 }
 
-function addZero(i) {
+/** funcion para añadir un 0 en los numeros menores a 10 **/
+const addZero = (i) => {
   if (i < 10) {
     i = "0" + i;
   }
@@ -359,13 +252,12 @@ const loginJira = async () => {
   // });
 }
 
-
 //funcion para extraer toda la informacion de la avería
 const data_averia = (swiss) => {
   $.ajax({
     async: false,
     type: "GET",
-    url: `${swiss.url_api_tgjira_pro}${swiss.key_number}`,
+    url: `${swiss.url_tgjira_pro}/rest/api/2/issue/${swiss.key_number}`,
     error: function (error) {
       console.log(error);
 
@@ -377,11 +269,10 @@ const data_averia = (swiss) => {
   })
 }
 
-
 /** funcion para comentar los ticket **/
 const comentarTicket = async (key_number, tokenBearer, comentario) => {
 
-  const sendData = await fetch(swiss.url_api_tgjira_pre + key_number + "/comment", {
+  const sendData = await fetch(swiss.url_tgjira_pro + "/rest/api/2/issue/" + key_number + "/comment", {
     "headers": {
       "Authorization": "Bearer " + tokenBearer,
       "content-type": "application/json",
@@ -393,10 +284,25 @@ const comentarTicket = async (key_number, tokenBearer, comentario) => {
   return sendData;
 }
 
+const actualizarAveria = async (key_number, tokenBearer) => {
+
+  return await fetch(`${swiss.url_tgjira_pro}/rest/api/latest/issue/${key_number}/transitions`, {
+    "headers": {
+      "Authorization": "Bearer " + tokenBearer,
+      "accept-language": "en,es-ES;q=0.9,es;q=0.8",
+      "content-type": "application/json",
+      "Cookie": "visid_incap_2600688=ECDxpcp7Qu2x4K/rhI9o76TPT2MAAAAAQUIPAAAAAAD98aMP7n3WcrxOHR0nz/Ak",
+    },
+    "body": JSON.stringify({ "transition": { "id": "301" }, }),
+    "method": "POST",
+  }).then(response => response.text())
+    .then(result => console.log(result))
+    .catch(error => console.log('error', error));
+}
 
 const changeStatusToInProgress = async (key_number, tokenBearer) => {
 
-  return await fetch(`https://jira-pre.service-dev.k8s.masmovil.com/rest/api/latest/issue/${key_number}/transitions`, {
+  return await fetch(`${swiss.url_tgjira_pro}/rest/api/latest/issue/${key_number}/transitions`, {
     "headers": {
       "Authorization": "Bearer " + tokenBearer,
       "accept-language": "en,es-ES;q=0.9,es;q=0.8",
@@ -410,11 +316,9 @@ const changeStatusToInProgress = async (key_number, tokenBearer) => {
     .catch(error => console.log('error', error));
 }
 
-
 const asignarAveria = async (key_number, tokenBearer, userToAssingee) => {
 
-  averia = "ATC-14205";
-  return await fetch(`https://jira-pre.service-dev.k8s.masmovil.com/rest/api/2/issue/${key_number}/assignee`, {
+  return await fetch(`${swiss.url_tgjira_pro}/rest/api/2/issue/${key_number}/assignee`, {
     "headers": {
       "Authorization": "Bearer " + tokenBearer,
       "content-type": "application/json",
@@ -424,63 +328,6 @@ const asignarAveria = async (key_number, tokenBearer, userToAssingee) => {
   }).then(response => response.text())
     .then(result => console.log(result))
     .catch(error => console.log('error', error));
-}
-
-const modificar_etiqueta = async (data) => {
-
-  swal.fire(`AVERÍA REITERADA, MODIFICANDO ETIQUETA</br > ESPERE POR FAVOR...`, "", "warning");
-
-  var url = "https://jira.masmovil.com/secure/AjaxIssueAction.jspa?decorator=none";
-
-  $.ajax({
-    type: "POST",
-    url: url,
-    data: data,
-    headers: {
-      "content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-      "Accept-Language": "es-ES,es;q=0.9",
-      "X-Requested-With": "XMLHttpRequest"
-    }
-  }).done(async function (data, textStatus, xhr) {
-
-    console.log("Etiqueta Añadida");
-
-  }).fail(async function (data, textStatus, xhr) {
-
-    console.log(textStatus);
-    console.log(data.responseText);
-    //This shows status code eg. 403
-    console.log("error", data.status);
-    //This shows status message eg. Forbidden
-    console.log("STATUS: " + xhr);
-
-  })
-}
-
-async function quitarAsignacion(rel, token) {
-
-  let xhr = new XMLHttpRequest();
-
-  data = `inline=true&decorator=dialog&id=${rel}&assignee=&comment=&commentLevel=&atl_token=${token}`
-
-  xhr.open("POST", "https://jira.masmovil.com/secure/AssignIssue.jspa", false);
-  xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
-  xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-  xhr.send(data);
-
-  if (xhr.readyState === 4 && xhr.status === 200) { return true; } else { return false }
-}
-
-async function registrarTicketHijo(rel, token) {
-
-  let xhr = new XMLHttpRequest();
-
-  xhr.open("POST", `https://jira.masmovil.com/secure/WorkflowUIDispatcher.jspa?id=${rel}&action=11&atl_token=${token}&returnUrl=https%3A%2F%2Fjira.masmovil.com%2Fissues%2F%3Ffilter%3D58408%26selectedIssueId%3D${rel}&decorator=dialog&inline=true&_=1595831703806`, false);
-  xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
-  //xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-  xhr.send();
-
-  if (xhr.readyState === 4 && xhr.status === 200) { return true; } else { return false }
 }
 
 const fechaFormatoMysql = (fecha) => {
@@ -523,9 +370,9 @@ const consultaRadius = async (provisioning_code, iua) => {
   req.params = params;
   const datos = JSON.stringify(req);
 
- return await axios({
+  return await axios({
     method: "post",
-    url: swiss.url_server_jarvis_masmovil,
+    url: swiss.url_jarvis_masmovil,
     data: datos,
     processData: false,
     dataType: "json",
@@ -543,254 +390,137 @@ const consultaFijoRadius = async (telfijo) => {
 
   return await axios({
     method: "post",
-    url: swiss.url_server_jarvis_masmovil,
+    url: swiss.url_jarvis_masmovil,
     data: datos,
     processData: false,
     dataType: "json",
   });
-
-
-
 }
 
-function commentradius(claves, ultimoRegistro){
-      //dentro de las claves vienen las claves que se quedaran en testresumen
-      let testRadiusRes = {}
-      let acctstatus = ultimoRegistro["AcctStatusType"]
-
-      //asigno sobre las claves que quiero mantener los valores del test de radius 
-      for (const item of claves){
-        testRadiusRes[item] = ultimoRegistro[item]
-      }
-  		// crear comentario para pegar
-      let keys = Object.keys(testRadiusRes)
-      let vals = Object.values(testRadiusRes)
-      
-      let radiusPanel = `{panel:title=*RADIUS*}`
-  
-      let cabecerasTestRadius = "||" + keys.join("||") + "||Status||"
-  
-      let radiusvalues = "|"
-      for (let item of vals) item === null ? radiusvalues += "nulo|" : radiusvalues += item + "|"
-
-      radiusvalues +=  (acctstatus == "Stop") ? "{color:red" : "{color:green" +`}${acctstatus}{color}|`
-
-      let comentarioradius = `{panel:title=*RADIUS*}\n${cabecerasTestRadius}\n${radiusvalues}\n{panel}`
-
-      return {'testRadiusRes': testRadiusRes, 'comentarioradius':comentarioradius,'acctstatus':acctstatus}
-}
-function commentftth(claves, testFtth){
+const commentRadius = (claves, ultimoRegistro) => {
   //dentro de las claves vienen las claves que se quedaran en testresumen
-  let testFtthRes = {}
-  
-  for (const item of claves){
+  let testRadiusRes = {};
+  let acctstatus = ultimoRegistro["AcctStatusType"];
+
+  //asigno sobre las claves que quiero mantener los valores del test de radius 
+  for (const item of claves) { testRadiusRes[item] = ultimoRegistro[item]; }
+
+  // crear comentario para pegar
+  let keys = Object.keys(testRadiusRes);
+  let vals = Object.values(testRadiusRes);
+  let cabecerasTestRadius = "||" + keys.join("||") + "||Status||";
+  let radiusvalues = "|";
+  let statusColor = (acctstatus === "Stop") ? "#F7D6C1" : "#86CB5D"
+
+  for (let item of vals) item === null ? radiusvalues += "nulo|" : radiusvalues += item + "|";
+
+  radiusvalues += (acctstatus === "Stop") ? "{color:#F7D6C1" : "{color:#86CB5D" + `}*${acctstatus}*{color}|`;
+
+  let comentarioRadius = `{panel:title=*RADIUS :*|titleBGColor=${statusColor}}\n${cabecerasTestRadius}\n${radiusvalues}\n{panel}`;
+
+  return { 'testRadiusRes': testRadiusRes, 'comentarioradius': comentarioRadius, 'acctstatus': acctstatus };
+}
+
+const commentFtth = (claves, testFtth) => {
+  //dentro de las claves vienen las claves que se quedaran en testresumen
+  let testFtthRes = {};
+
+  for (const item of claves) {
     i = testFtth.resultado.datos.outputParam.find(e => e.key === item);
-    testFtthRes[i.key] = parseInt(i.value)
-  }
-  
-  let keys = Object.keys(testFtthRes)
-  let vals = Object.values(testFtthRes)
-
-  let cabecerasTestFTTH = "||" + keys.join("||") + "||"
-      
-  let tablaFTTH = "|"
-  for (let item of vals) item === null ? tablaFTTH += "nulo|" : tablaFTTH += item + "|"
-
-  let comentarioFTTH = `{panel:title=*TEST FTTH / Fecha del Test: ${testFtth.fecha}*}${cabecerasTestFTTH}\n${tablaFTTH}\n{panel}`
-  return {'testFtthRes': testFtthRes, 'comentarioFTTH':comentarioFTTH,'ont_potencia_rx':testFtthRes["ont_potencia_rx"],'olt_potencia_rx':testFtthRes["olt_potencia_rx"]}
-}
-function commentTelf(claves,TestFijo){
-  let testTelfRes = {}
-
-  for (const item of claves){
-    testTelfRes[item] = TestFijo.data.estado[item]
+    testFtthRes[i.key] = parseInt(i.value);
   }
 
-  let keys = Object.keys(testTelfRes)
-  let vals = Object.values(testTelfRes)
+  let keys = Object.keys(testFtthRes);
+  let vals = Object.values(testFtthRes);
+  let cabecerasTestFTTH = "||" + keys.join("||") + "||";
+  let tablaFTTH = "|";
 
-  const testPanelFijo = "{panel:title=*ESTADO FIJO*}"
+  for (let item of vals) item === null ? tablaFTTH += "nulo|" : tablaFTTH += item + "|";
 
-  let cabecerasTestTelf = "||" + keys.join("||") + "||"
-      
-  let tablaTestTelf= "|"
-  for (let item of vals) item === null ? tablaTestTelf += "nulo|" : tablaTestTelf += item + "|"
-  tablaTestTelf +=  `|`
+  let comentarioFTTH = `{panel:title=*TEST FTTH / Fecha del Test: ${testFtth.fecha}*}${cabecerasTestFTTH}\n${tablaFTTH}\n{panel}`;
 
-  let comentarioTelf = `{panel:title=*ESTADO FIJO*}${cabecerasTestTelf}\n${tablaTestTelf}\n{panel}`
-  return {'testTelfRes': testTelfRes, 'comentarioTelf':comentarioTelf,'CpeRegistered':testTelfRes["CpeRegistered"]}
+  return { 'testFtthRes': testFtthRes, 'comentarioFTTH': comentarioFTTH, 'ont_potencia_rx': testFtthRes["ont_potencia_rx"], 'olt_potencia_rx': testFtthRes["olt_potencia_rx"] };
 }
 
-const comentarAveria = async (averia, tokenBearer, comentarioTelf, comentarioFTTH, comentarioradius, comentario) => {
+const commentTelf = (claves, TestFijo) => {
+  let testTelfRes = {};
+
+  for (const item of claves) { testTelfRes[item] = TestFijo.data.estado[item]; }
+
+  let keys = Object.keys(testTelfRes);
+  let vals = Object.values(testTelfRes);
+  let testPanelFijo = "{panel:title=*ESTADO FIJO*}";
+  let cabecerasTestTelf = "||" + keys.join("||") + "||";
+  let tablaTestTelf = "|";
+
+  for (let item of vals) item === null ? tablaTestTelf += "nulo|" : tablaTestTelf += item + "|";
+
+  tablaTestTelf += `|`;
+
+  let comentarioTelf = `{panel:title=*ESTADO FIJO :*}${cabecerasTestTelf}\n${tablaTestTelf}\n{panel}`;
+
+  return { 'testTelfRes': testTelfRes, 'comentarioTelf': comentarioTelf, 'CpeRegistered': testTelfRes["CpeRegistered"] };
+}
+
+const comentarAveria = async (averia, tokenBearer, comentarioTelf, comentarioFTTH, comentarioRadius, comentario) => {
   //si viene sin comentario se añade el tipico de cierres
-  comentario = (typeof comentario !== 'string') ? '*ROBOT CIERRES : LINEA RECUPERA SERVICIO, SE RESUELVE TICKET*' : comentario
+  comentario = (typeof comentario !== 'string') ? '*ROBOT CIERRES : LINEA RECUPERA SERVICIO, SE RESUELVE TICKET*' : comentario;
   //son paneles si se añade el comentario undefined no se pega el test
   let comment = "";
-  comment += typeof comentarioTelf !== undefined ? comentarioTelf + "\n" : "" 
-  comment += typeof comentarioFTTH !== undefined ? comentarioFTTH + "\n" : ""
-  comment += typeof comentarioradius !== undefined ? comentarioradius + "\n" : "" 
-  comment += `{panel:title=*COMENTARIO*}\n${comentario}{panel}`
+  comment += comentarioTelf ? comentarioTelf + "\n" : "";
+  comment += comentarioFTTH ? comentarioFTTH + "\n" : "";
+  comment += comentarioRadius ? comentarioRadius + "\n" : "";
+  comment += `{panel:title=*COMENTARIO :*|titleBGColor=#FDA321}\n${comentario}{panel}`;
 
-  const datos = { body: comment};
+  const datos = { body: comment };
 
   var config = {
     method: 'post',
     maxBodyLength: Infinity,
-    url: `${swiss.url_api_tgjira_pro}${averia}/comment`,
-    headers: { 
-      'Authorization': "Bearer " + tokenBearer, 
-      'Content-Type': 'application/json', 
+    url: `${swiss.url_tgjira_pro}/rest/api/2/issue/${averia}/comment`,
+    headers: {
+      'Authorization': "Bearer " + tokenBearer,
+      'Content-Type': 'application/json',
     },
-    data : JSON.stringify(datos)
+    data: JSON.stringify(datos)
   };
 
   await axios(config)
-  .then(function (response) {
-    return response;
-    console.log(JSON.stringify(response.data));
-  })
-  .catch(function (error) {
-    return error;
-    console.log(error);
-  });
+    .then(function (response) {
+      return response;
+    })
+    .catch(function (error) {
+      return error;
+    });
 }
 
-const addComentIssue = (averia, respuesta, logTest, fecha_test, telFijo, datosFijo, comentario) => {
-
-  const radiusPanel = `{panel:title=*RADIUS*}`;
-  const comentarioAgente = "{panel:title=*COMENTARIO*}";
-  const panelRadius = '|| Fecha_inicio || Fecha_fin || ProvisionigCode || Duration || ipAddress || natIpAddress || Bras || Estado ||';
-
-  if (logTest !== undefined) {
-    const testPanel = `{panel:title=*TEST FTTH / Fecha del Test: ${fecha_test}*}`;
-    const panelTestFTTH = "|| ont_estado_operacional || olt_potencia_rx || olt_potencia_tx || ont_potencia_rx || ont_estado_administrativo || ";
-    const tablaFTTH = `|${logTest[0].ont_estado_operacional}|-${logTest[0].olt_potencia_rx}|${logTest[0].olt_potencia_tx}|-${logTest[0].ont_potencia_rx}|${logTest[0].ont_estado_administrativo}|`;
-
-    if (telFijo) {
-      const estadoFijo = "{panel:title=*ESTADO FIJO*}";
-
-      var testFijo = "";
-
-      for (const key in datosFijo) {
-
-        const element = key;
-        const valor = datosFijo[key];
-
-        switch (key) {
-          case "CpeRegistered":
-            testFijo += `||${element} : ${valor}\n`;
-            break;
-          case "ENUM":
-            testFijo += `||${element} : ${valor}\n`;
-            break;
-          case "ExistsIMS":
-            testFijo += `||${element} : ${valor}\n`;
-            break;
-          case "Portability":
-            testFijo += `||${element} : ${valor}\n`;
-            break;
-          case "Route":
-            testFijo += `||${element} : ${valor}\n`;
-            break;
-          case "XenaStaus":
-            testFijo += `||${element} : ${valor}\n`;
-            break;
-
-          default:
-            break;
-        }
-
-      }
-
-      comentario = { body: `||${testPanel}${panelTestFTTH}\n${tablaFTTH}\n${estadoFijo}${testFijo}\n${radiusPanel}${panelRadius}\n${respuesta}\n${comentarioAgente}\n${comentario}{panel}` };
-
-    } else {
-      comentario = { body: `||${testPanel}${panelTestFTTH}\n${tablaFTTH}\n${radiusPanel}${panelRadius}\n${respuesta}\n${comentarioAgente}\n${comentario}{panel}` };
-    }
-
-  } else {
-
-    if (telFijo) {
-
-      const estadoFijo = "{panel:title=*ESTADO FIJO*}";
-
-      var testFijo = "";
-
-      for (const key in datosFijo) {
-
-        const element = key;
-        const valor = datosFijo[key];
-
-        switch (key) {
-          case "CpeRegistered":
-            testFijo += `||${element} : ${valor}\n`;
-            break;
-          case "ENUM":
-            testFijo += `||${element} : ${valor}\n`;
-            break;
-          case "ExistsIMS":
-            testFijo += `||${element} : ${valor}\n`;
-            break;
-          case "Portability":
-            testFijo += `||${element} : ${valor}\n`;
-            break;
-          case "Route":
-            testFijo += `||${element} : ${valor}\n`;
-            break;
-          case "XenaStaus":
-            testFijo += `||${element} : ${valor}\n`;
-            break;
-
-          default:
-            break;
-        }
-
-      }
-      comentario = { body: `||${estadoFijo}${testFijo}\n${radiusPanel}${panelRadius}\n${respuesta}\n${comentarioAgente}\n${comentario}{panel}` };
-
-    } else {
-      comentario = { body: `||${radiusPanel}${panelRadius}\n${respuesta}\n${comentarioAgente}\n${comentario}{panel}` };
-    }
-  }
-
-  const myHeaders = new Headers();
-  myHeaders.append("X-Requested-With", "XMLHttpRequest");
-  myHeaders.append("Accept-Language", "es-ES,es;q=0.9");
-  myHeaders.append("Content-Type", "application/json")
-  const requestOptions = {
-    method: 'POST',
-    headers: myHeaders,
-    body: JSON.stringify(comentario),
-  };
-  return fetch(`${swiss.url_api_tgjira_pre}${averia}/comment`, requestOptions);
-}
-
-const cierre_ftth = async (key_number, tokenBearer, flagPasoFSM, etiquetaAI) => {
+const cierre_ftth = async (key_number, tokenBearer, flagPasoFSM, etiquetaAI, marca, telefonoDeContacto) => {
 
   //cierra la averia indicando si ha pasado por fsm o no y si tiene etiqueta #AI o no
 
   let body = {
     "transition": {
       "id": "31"
-    },"fields": {
-      "customfield_10403": "Resolution Test", //detalle de la solucion -- texto libre
-      "customfield_10517": [{ "key": "CAT-36525" }] //Categoría de Cierre -- Avería Desaparecida
-    }};
+    }, "fields": {
+      "customfield_10403": "LINEA RECUPERA SERVICIO, SE RESUELVE TICKET", //detalle de la solucion -- texto libre
+      "customfield_10517": [{ "key": "CAT-13174" }] //Categoría de Cierre -- Avería Desaparecida
+    }
+  };
 
-    //Subcategoría de Cierre -- Resuelto con visita sin actuación CAT-36517 Resuelto sin visita sin actuación	CAT-36516
-    body["fields"]["customfield_10518"] = [{ "key": flagPasoFSM === true ? "CAT-36517" : "CAT-36516"  }]
+  //Subcategoría de Cierre -- Resuelto con visita sin actuación CAT-13026 Resuelto sin visita sin actuación	CAT-13025
+  body["fields"]["customfield_10518"] = [{ "key": flagPasoFSM === true ? "CAT-13026" : "CAT-13025" }];
 
-    //Abierto Incorrectamente -- value 12401 = NO value 12452 = SI
-    body["fields"]["customfield_15004"] = { "value": etiquetaAI == true ? "Si" : "No" }
+  //Abierto Incorrectamente -- value 12401 = NO value 12452 = SI
+  body["fields"]["customfield_14015"] = { "value": etiquetaAI ? "Si" : "No" };
 
-    // Motivo Abierta Incorrectamente -- ATC-36782 = Pruebas incompletas
-    // solo se incluye si hay etiqueta #AI
-    if(etiquetaAI == true) body["fields"]["customfield_14616"] = [{ "key": "ATC-36792" }]
+  // Motivo Abierta Incorrectamente -- ATC-36782 = Pruebas incompletas
+  // solo se incluye si hay etiqueta #AI
+  if (etiquetaAI) body["fields"]["customfield_14616"] = [{ "key": "ATC-36792" }];
 
-    //"customfield_10507": { "value": "No" }, //ACTUACION DEL TECNICO VALUE 14410 = NO VALUE 14411 = SI
-    //"customfield_10508": { "value": "No" }, //FACTURABLE VALUE 10310 = NO VALUE 10309 = SI
+  //"customfield_10507": { "value": "No" }, //ACTUACION DEL TECNICO VALUE 14410 = NO VALUE 14411 = SI
+  //"customfield_10508": { "value": "No" }, //FACTURABLE VALUE 10310 = NO VALUE 10309 = SI
 
-  return await fetch(`https://jira-pre.service-dev.k8s.masmovil.com/rest/api/latest/issue/${key_number}/transitions`, {
+  return await fetch(`${swiss.url_tgjira_pro}/rest/api/latest/issue/${key_number}/transitions`, {
     "headers": {
       "Authorization": "Bearer " + tokenBearer,
       "content-type": "application/json",
@@ -801,109 +531,14 @@ const cierre_ftth = async (key_number, tokenBearer, flagPasoFSM, etiquetaAI) => 
     .then(async result => {
 
       //mandamos locucion
-      // console.log(`${averia} Enviando locucion...`)
-      // title = `${averia} Enviando locucion...`
-      // alerta(title, 90000);
-      // await sleep(0.5);
-      //await locucion(movil, seguridad, averia);
+      console.log(`${key_number} Enviando locucion...`)
+      title = `${key_number} Enviando locucion...`
+      showAlert(title, 90000);
+      await sleep(0.5);
+      await locucion(telefonoDeContacto, marca, key_number);
 
       title = `AVERIA_${key_number} Averia Cerrada`;
-      alerta(title, 12000);
-      await sleep(0.5);
-    }).catch(error => console.log('error', error));
-}
-
-const derivar_ftth = async () => {
-
-  return await fetch(`https://jira-pre.service-dev.k8s.masmovil.com/rest/api/latest/issue/${key_number}/transitions`, {
-    "headers": {
-      "Authorization": "Bearer " + tokenBearer,
-      "content-type": "application/json",
-    },
-    "body": JSON.stringify({
-      "transition": {
-        "id": "51"
-      },
-      "fields": {
-
-        "customfield_10327": [{ "key": "ESC-36518" }],
-      }
-      //ESC-51 = NOC-Fijo
-      //ESC-56 = Provision
-      //ESC-1009 = Operaciones Cliente Provisión
-      //ESC-36518 = SATN2-STFIJO-SGI
-
-    }),
-    "method": "POST",
-  }).then(response => response.text())
-    .then(async result => {
-
-
-      title = `AVERIA_${key_number} Derivada`;
-      alerta(title, 12000);
-      await sleep(0.5);
-    }).catch(error => console.log('error', error));
-}
-
-const escalado_ftth_fsm = async (key_number, tokenBearer) => {
-
-  return await fetch(`https://jira-pre.service-dev.k8s.masmovil.com/rest/api/latest/issue/${key_number}/transitions`, {
-    "headers": {
-      "Authorization": "Bearer " + tokenBearer,
-      "accept-language": "en,es-ES;q=0.9,es;q=0.8",
-      "content-type": "application/json",
-      "Cookie": "visid_incap_2600688=ECDxpcp7Qu2x4K/rhI9o76TPT2MAAAAAQUIPAAAAAAD98aMP7n3WcrxOHR0nz/Ak",
-    },
-    "body": JSON.stringify({
-      "transition": {
-        "id": "111"
-      },
-      "fields": {
-        "customfield_14303": [{ "key": "ACT-36549" }],
-        "customfield_10854": { "value": "No" },
-        "customfield_11800": "prueba de texto para la contrata",
-      },
-      "update": {
-        "comment": [
-          {
-            "add": {
-              "body": "" //añadimos cadena de texto si fuese necesario
-            }
-          }
-        ]
-      },
-
-
-      //ACT-36549 = Sistema Externo FSM
-      //ATC-14130 = Sistema Externo ORANGE
-      //customfield_10854 = Pruebas conjuntas 
-      //customfield_11800 = Informacion Externo
-      //ESC-36518 = SATN2-STFIJO-SGI
-
-      /** PARA ESCALADO ORANGE(ADSL) SE NECESITAN LOS:
-       * customfield_11703 = Categoria Externo = ATC-14130 = Posventa
-       * 
-       * ACT-25269 = FTTH_INS_FALLO_WS_CAMBIO_CTO
-       * ACT-25270 = FTTH_INS_FALLO_WS_CONSULTA_CTO
-       * ACT-963 = FTTH_POS_ACC_CAMBIO DE CTO
-       * ACT-968 = FTTH_POS_ACC_CD SATURADA
-       * ACT-929 = FTTH_POS_ACC_CD SIN POTENCIA
-       * ACT-934 = FTTH_POS_ACC_CORTES
-       * ACT-927 = FTTH_POS_ACC_LENTITUD
-       * ACT-25272 = FTTH_POS_ACC_PTO SIN POTENCIA
-       * ACT-975 = FTTH_POS_ACC_SINCRONISMO
-       * ACT-985 = FTTH_POS_ACC_SYNN
-       * ACT-966 = FTTH_POS_IPTV_DEGRADACION
-       * ACT-984 = FTTH_POS_IPTV_NO ACCESO
-       * ACT-994 = FTTH_POS_IPTV_NO DESCARGA PARRILLA
-       *  **/
-
-    }),
-    "method": "POST",
-  }).then(response => response.text())
-    .then(async result => {
-      title = `AVERIA_${key_number} ESCALADA A FSM CORRECTAMENTE`;
-      alerta(title, 12000);
+      showAlert(title, 12000);
       await sleep(0.5);
     }).catch(error => console.log('error', error));
 }
@@ -923,7 +558,7 @@ const testFtthLaunch = (iua, swiss) => {
     // //LANZADON PETICION EN AJAX(FUNCIONA CORRECTO)
     const respuesta = $.ajax({
       async: false,
-      url: swiss.url_server_jarvis_masmovil,
+      url: swiss.url_jarvis_masmovil,
       type: "POST",
       data: datos,
       processData: false,
@@ -942,7 +577,7 @@ const testFtthLaunch = (iua, swiss) => {
   } else { return "sin test" }
 }
 
-function insert_DB(usuario, averia, fecha_creacion, accion_robot, fecha_escalado, tipologia, tecnologia, fecha_inicio, fecha_fin, robot) {
+const insert_DB = (usuario, averia, fecha_creacion, accion_robot, fecha_escalado, tipologia, tecnologia, fecha_inicio, fecha_fin, robot) => {
 
   var req = {};
   var params = [usuario, averia, fecha_creacion, accion_robot, fecha_escalado, tipologia, tecnologia, fecha_inicio, fecha_fin, robot];
@@ -970,7 +605,8 @@ function insert_DB(usuario, averia, fecha_creacion, accion_robot, fecha_escalado
   })
 }
 
-function setCutTime() {
+/** funcion para determinar la duracion de los cortes **/
+const setCutTime = () => {
   var cortesTime = $("#cortestime").val();
   switch (cortesTime) {
     case '6h':
