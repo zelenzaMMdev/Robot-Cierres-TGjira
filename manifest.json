@@ -18,8 +18,8 @@
    "manifest_version": 3,
    "name": "Robot cierres TGjira",  
    "description": "by Desarrollo Zelenza @2023",
-   "version": "1.1.0",
-   "version_name": "1.1.0(02/03/2023)",
+   "version": "1.1.1",
+   "version_name": "1.1.1(09/03/2023)",
    "options_ui": {},
    "permissions": [
       "activeTab",

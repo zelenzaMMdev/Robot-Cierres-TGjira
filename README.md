@@ -1,6 +1,7 @@
 # Robot CIERRES TGJIRA
 
 ```
+versión 1.1.1 - (Rafa) - 09/03/2023 - Modificación de la función locución -
 versión 1.1.0 - (Rafa) - 08/03/2023 - Refactorización de código, actualización de librerías, modificación del comportamiento en la ejecución, añadida parte de cierre de NEBA/VULA, añadidas nuevas funciones para actualizar las averías, añadido comprobación de reitero y comprobación de estados de la avería -
 versión 1.0.0 - (Alfonso) - 01/03/2023 - Initial Commit -
 

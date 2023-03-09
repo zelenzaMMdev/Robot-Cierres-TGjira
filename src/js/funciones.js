@@ -82,7 +82,7 @@ const horarioLocucion = (timeini, timefin, time) => {
   return true;
 }
 
-const locucion = async (movil, seguridad, key_number) => {
+const locucion = async (telefonoDeContacto, seguridad, key_number) => {
 
   let now = new Date();
   now.setMinutes(now.getMinutes() + 1);
@@ -149,7 +149,7 @@ const locucion = async (movil, seguridad, key_number) => {
       date: horaDeLaLlamada,
       idLista: operadorC2C,
       nombre: "Locucion",
-      msisdn: movil,
+      msisdn: telefonoDeContacto,
       lang: "1"
     };
 
@@ -159,7 +159,7 @@ const locucion = async (movil, seguridad, key_number) => {
     await sleep(1)
     newWindow.close();
 
-    const comentariolocucion = { body: `{panel:title=*ROBOT DE CIERRES :*|titleBGColor=#51A9C0}\n*Se informa a cliente mediante locucion automatica en el TC: ${movil} el dia ${fechaDeLaLlamada} a las ${horaDeLaLlamada} del cierre de la incidencia con evidencia de funcionamiento.*{panel}` };
+    const comentariolocucion = { body: `{panel:title=*ROBOT DE CIERRES :*|titleBGColor=#51A9C0}\n*Se informa a cliente mediante locucion automatica en el TC: ${telefonoDeContacto} el dia ${fechaDeLaLlamada} a las ${horaDeLaLlamada} del cierre de la incidencia con evidencia de funcionamiento.*{panel}` };
 
     const myHeaders = new Headers();
     myHeaders.append("X-Requested-With", "XMLHttpRequest");
